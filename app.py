@@ -1,91 +1,95 @@
 import streamlit as st
 import pandas as pd
 from sentence_transformers import SentenceTransformer, util
+import re
 
-# Load model and data once
+# Load model and CSV
 @st.cache_resource
 def load_model_and_data():
-    df = pd.read_csv("symptom_department.csv")
+    df = pd.read_csv("medical_symptoms_updated.csv")
     model = SentenceTransformer("all-MiniLM-L6-v2")
     embeddings = model.encode(df["Symptom Description"].tolist(), convert_to_tensor=True)
     return df, model, embeddings
 
 df, model, symptom_embeddings = load_model_and_data()
-body_parts = ["head", "chest", "stomach", "legs", "arms", "back", "eyes", "throat", "feet", "hands", "skin", "neck"]
 
-# Init chatbot state
+# Body parts and pain types for simple keyword detection
+body_parts = df["Location"].unique().tolist()
+pain_types = df["Pain Type"].unique().tolist()
+
+def get_department(query):
+    query_embedding = model.encode(query, convert_to_tensor=True)
+    similarity = util.cos_sim(query_embedding, symptom_embeddings)
+    best_match = int(similarity.argmax())
+    return df.iloc[best_match]["Department"]
+
+# Chat state initialization
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "step" not in st.session_state:
-    st.session_state.step = 0
-if "symptom_info" not in st.session_state:
-    st.session_state.symptom_info = {"symptom": "", "location": "", "duration": "", "severity": ""}
-
-# Greeting at launch
-if not st.session_state.messages:
-    st.session_state.messages.append(("assistant", "👋 Hi! I'm your medical assistant. What symptoms are you experiencing?"))
+    st.session_state.step = -1
+    st.session_state.data = {"symptom": "", "location": "", "duration": "", "pain_type": ""}
 
 st.title("🩺 AI Medical Chatbot")
 
-# Restart conversation
-if st.button("🔄 Start Over"):
-    st.session_state.messages = [("assistant", "👋 Hi! I'm your medical assistant. What symptoms are you experiencing?")]
-    st.session_state.step = 0
-    st.session_state.symptom_info = {"symptom": "", "location": "", "duration": "", "severity": ""}
+if st.button("🔄 Restart Chat"):
+    st.session_state.messages = []
+    st.session_state.step = -1
+    st.session_state.data = {"symptom": "", "location": "", "duration": "", "pain_type": ""}
     st.experimental_rerun()
 
-# Show chat history
+# Show chat
 for role, text in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(text)
 
-# RAG logic
-def get_department(text):
-    user_embedding = model.encode(text, convert_to_tensor=True)
-    sim_scores = util.cos_sim(user_embedding, symptom_embeddings)
-    best_idx = int(sim_scores.argmax())
-    return df.iloc[best_idx]["Department"]
-
-# Actual chatbot logic
-prompt = st.chat_input("Type your message...")
-
-if prompt:
-    st.session_state.messages.append(("user", prompt))
-    msg = prompt.lower().strip()
+# User input
+user_input = st.chat_input("Type your message...")
+if user_input:
+    st.session_state.messages.append(("user", user_input))
+    user_input_lower = user_input.lower().strip()
     step = st.session_state.step
-    info = st.session_state.symptom_info
+    data = st.session_state.data
 
-    if msg in ["hi", "hello", "hey"]:
-        st.session_state.messages.append(("assistant", "Hello! Please tell me your symptoms."))
-    elif step == 0:
-        info["symptom"] = prompt
-        detected = next((bp for bp in body_parts if bp in msg), None)
-        if detected:
-            info["location"] = detected
+    # STEP -1: Waiting for first user message
+    if step == -1:
+        data["symptom"] = user_input
+        found_location = next((bp for bp in body_parts if bp in user_input_lower), None)
+        if found_location:
+            data["location"] = found_location
             st.session_state.step = 2
             st.session_state.messages.append(("assistant", "How long have you been experiencing this?"))
         else:
             st.session_state.step = 1
-            st.session_state.messages.append(("assistant", "Where in your body are you feeling this?"))
+            st.session_state.messages.append(("assistant", "Where in your body is this occurring?"))
+
+    # STEP 1: LOCATION
     elif step == 1:
-        info["location"] = prompt
+        data["location"] = user_input
         st.session_state.step = 2
         st.session_state.messages.append(("assistant", "How long have you been experiencing this?"))
+
+    # STEP 2: DURATION
     elif step == 2:
-        if any(x in msg for x in ["day", "week", "hour", "month"]):
-            info["duration"] = prompt
+        if re.search(r"\b(\d+\s*(day|week|hour|month|minute|year)s?|today|yesterday|this morning|few hours|couple of days)\b", user_input_lower):
+            data["duration"] = user_input
             st.session_state.step = 3
-            st.session_state.messages.append(("assistant", "How would you rate it? (Mild / Moderate / Severe)"))
+            st.session_state.messages.append(("assistant", "What type of pain is it? (e.g., sharp, dull, throbbing, burning, etc.)"))
         else:
-            st.session_state.messages.append(("assistant", "Please enter duration like '3 days', '1 week', etc."))
+            st.session_state.messages.append(("assistant", "Please enter a realistic duration (e.g., '3 days', 'since yesterday', '1 hour')."))
+
+    # STEP 3: PAIN TYPE
     elif step == 3:
-        if msg in ["mild", "moderate", "severe"]:
-            info["severity"] = prompt
-            query = f"{info['symptom']} {info['location']} {info['duration']} {info['severity']}"
-            dept = get_department(query)
-            st.session_state.messages.append(("assistant", f"✅ Based on what you've told me, I recommend the **{dept}** department."))
-            # Reset convo
-            st.session_state.step = 0
-            st.session_state.symptom_info = {"symptom": "", "location": "", "duration": "", "severity": ""}
+        found_pain = next((pt for pt in pain_types if pt in user_input_lower), None)
+        if found_pain:
+            data["pain_type"] = found_pain
         else:
-            st.session_state.messages.append(("assistant", "Please answer with: Mild, Moderate, or Severe."))
+            data["pain_type"] = user_input  # Accept as-is
+
+        # Final prediction
+        full_query = f"{data['symptom']} {data['location']} {data['duration']} {data['pain_type']}"
+        dept = get_department(full_query)
+        st.session_state.messages.append(("assistant", f"✅ Based on what you've told me, I recommend visiting the **{dept}** department."))
+
+        # Reset for new conversation
+        st.session_state.step = -1
+        st.session_state.data = {"symptom": "", "location": "", "duration": "", "pain_type": ""}
