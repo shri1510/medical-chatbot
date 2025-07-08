@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from sentence_transformers import SentenceTransformer, util
 
+# Load data & model only once
 @st.cache_resource
 def load_model_and_data():
     df = pd.read_csv("symptom_department.csv")
@@ -11,24 +12,56 @@ def load_model_and_data():
 
 df, model, symptom_embeddings = load_model_and_data()
 
-st.title("🩺 AI Medical Chatbot")
-st.markdown("Describe your symptoms, and I'll guide you to the right department.")
+# Store chat history
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
+if 'symptom_info' not in st.session_state:
+    st.session_state.symptom_info = {"symptom": "", "location": "", "duration": "", "severity": ""}
+if 'step' not in st.session_state:
+    st.session_state.step = 0
 
-with st.form("symptom_form"):
-    symptom = st.text_area("What symptom(s) are you experiencing?")
-    location = st.text_input("Where is the symptom located?")
-    duration = st.selectbox("How long has it been happening?", ["< 1 day", "1-3 days", "1 week", "More than a week"])
-    severity = st.radio("How severe is it?", ["Mild", "Moderate", "Severe"])
-    submitted = st.form_submit_button("Get Recommendation")
+st.title("🩺 Medical Chatbot")
 
 def retrieve_department(user_input):
     user_embedding = model.encode(user_input, convert_to_tensor=True)
     similarity = util.cos_sim(user_embedding, symptom_embeddings)
-    idx = int(similarity.argmax())  
+    idx = int(similarity.argmax())
     return df.iloc[idx]['Department']
 
+# Display chat history
+for msg in st.session_state.messages:
+    role, content = msg
+    with st.chat_message(role):
+        st.markdown(content)
 
-if submitted:
-    full_input = f"{symptom} {location} {duration} {severity}"
-    dept = retrieve_department(full_input)
-    st.success(f"📌 You should consult the **{dept}** department.")
+# Input box
+if prompt := st.chat_input("Type your message..."):
+    st.session_state.messages.append(("user", prompt))
+    response = ""
+
+    if st.session_state.step == 0:
+        st.session_state.symptom_info["symptom"] = prompt
+        response = "Got it. Where do you feel this symptom?"
+        st.session_state.step += 1
+
+    elif st.session_state.step == 1:
+        st.session_state.symptom_info["location"] = prompt
+        response = "How long have you had this symptom?"
+        st.session_state.step += 1
+
+    elif st.session_state.step == 2:
+        st.session_state.symptom_info["duration"] = prompt
+        response = "On a scale of Mild, Moderate, Severe — how bad is it?"
+        st.session_state.step += 1
+
+    elif st.session_state.step == 3:
+        st.session_state.symptom_info["severity"] = prompt
+        info = st.session_state.symptom_info
+        full_input = f"{info['symptom']} {info['location']} {info['duration']} {info['severity']}"
+        department = retrieve_department(full_input)
+        response = f"Based on that, I recommend visiting the **{department}** department. ✅"
+        st.session_state.step = 0  # Reset
+
+    st.session_state.messages.append(("assistant", response))
+    with st.chat_message("assistant"):
+        st.markdown(response)
