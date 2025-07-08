@@ -24,8 +24,9 @@ with st.form("symptom_form"):
 def retrieve_department(user_input):
     user_embedding = model.encode(user_input, convert_to_tensor=True)
     similarity = util.cos_sim(user_embedding, symptom_embeddings)
-    idx = similarity.argmax()
+    idx = int(similarity.argmax())  
     return df.iloc[idx]['Department']
+
 
 if submitted:
     full_input = f"{symptom} {location} {duration} {severity}"
