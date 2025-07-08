@@ -1,0 +1,34 @@
+Symptom Description,Location,Pain Type,Department
+headache,head,sharp,Neurology
+head pain,head,dull,Neurology
+throbbing headache,head,throbbing,Neurology
+migraines,head,pulsating,Neurology
+pressure in head,head,pressure,Neurology
+chest pain,chest,sharp,Cardiology
+tightness in chest,chest,tightness,Cardiology
+burning chest pain,chest,burning,Gastroenterology
+pressure in chest,chest,pressure,Cardiology
+stomach ache,stomach,crampy,Gastroenterology
+abdominal pain,stomach,dull,Gastroenterology
+sharp pain in stomach,stomach,sharp,Gastroenterology
+bloating,stomach,fullness,Gastroenterology
+leg pain,legs,sharp,Orthopedics
+aching legs,legs,dull,Orthopedics
+numbness in legs,legs,numb,Neurology
+cramps in legs,legs,crampy,Orthopedics
+back pain,back,sharp,Orthopedics
+lower back pain,back,dull,Orthopedics
+radiating back pain,back,radiating,Neurology
+itchy skin,skin,itchy,Dermatology
+rashes,skin,rash,Dermatology
+burning skin,skin,burning,Dermatology
+eye pain,eyes,sharp,Ophthalmology
+itchy eyes,eyes,itchy,Ophthalmology
+dry eyes,eyes,dryness,Ophthalmology
+sore throat,throat,scratchy,ENT
+throat pain,throat,sharp,ENT
+burning throat,throat,burning,ENT
+arm pain,arms,dull,Orthopedics
+tingling in arms,arms,tingling,Neurology
+foot pain,feet,sharp,Orthopedics
+numb feet,feet,numb,Neurology
