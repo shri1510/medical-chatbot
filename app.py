@@ -28,6 +28,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
     st.session_state.step = -1
     st.session_state.data = {"symptom": "", "location": "", "duration": "", "pain_type": ""}
+    st.session_state.pending_user_input = None
 
 st.title("🩺 AI Medical Chatbot")
 
@@ -35,6 +36,7 @@ if st.button("🔄 Restart Chat"):
     st.session_state.messages = []
     st.session_state.step = -1
     st.session_state.data = {"symptom": "", "location": "", "duration": "", "pain_type": ""}
+    st.session_state.pending_user_input = None
     st.experimental_rerun()
 
 # Show chat
@@ -42,9 +44,13 @@ for role, text in st.session_state.messages:
     with st.chat_message(role):
         st.markdown(text)
 
-# User input
+# Capture user input only once per cycle
 user_input = st.chat_input("Type your message...")
-if user_input:
+if user_input and st.session_state.pending_user_input is None:
+    st.session_state.pending_user_input = user_input
+
+if st.session_state.pending_user_input:
+    user_input = st.session_state.pending_user_input
     st.session_state.messages.append(("user", user_input))
     user_input_lower = user_input.lower().strip()
     step = st.session_state.step
@@ -93,3 +99,6 @@ if user_input:
         # Reset for new conversation
         st.session_state.step = -1
         st.session_state.data = {"symptom": "", "location": "", "duration": "", "pain_type": ""}
+
+    # Clear pending input
+    st.session_state.pending_user_input = None
