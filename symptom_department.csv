@@ -1,0 +1,21 @@
+Symptom Description,Department
+"chest pain, shortness of breath, palpitations",Cardiology
+"skin rash, itching, redness, acne",Dermatology
+"severe headache, dizziness, seizures",Neurology
+"stomach ache, indigestion, bloating, nausea",Gastroenterology
+"joint pain, back pain, stiffness, swelling",Orthopedics
+"eye pain, blurred vision, eye dryness",Ophthalmology
+"ear pain, hearing loss, ringing in ears",ENT
+"fever, chills, body ache, weakness",General Physician
+"frequent urination, burning sensation",Urology
+"mood swings, anxiety, depression",Psychiatry
+"chest tightness, breathing difficulty, wheezing",Pulmonology
+"sore throat, cough, nasal congestion",ENT
+"menstrual cramps, irregular periods",Gynecology
+"weight gain, fatigue, cold intolerance",Endocrinology
+"hand tremors, sweating, heat intolerance",Endocrinology
+"urinary incontinence, kidney pain",Nephrology
+"memory loss, confusion, disorientation",Neurology
+"muscle cramps, weakness, twitching",Physiotherapy
+"numbness, tingling, limb weakness",Neurology
+"abdominal pain, diarrhea, constipation",Gastroenterology
